@@ -1,12 +1,10 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "releaseDate": "2024-12-19",
   "updateUrl": "./",
   "changelog": [
-    "Added search functionality to filter cards by name or number",
-    "Improved header layout with reduced vertical spacing",
-    "Added clear search button for easy search reset",
-    "Search automatically clears when switching between sets"
+    "Fixed mobile zoom issue when focusing on search input",
+    "Search input now uses 16px font size on mobile to prevent auto-zoom"
   ]
 }
 
