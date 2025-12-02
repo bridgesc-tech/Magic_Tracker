@@ -144,8 +144,15 @@ h1 {
     border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: 6px;
     color: var(--text-color);
-    font-size: 0.9rem;
+    font-size: 16px; /* 16px prevents auto-zoom on mobile */
     transition: all 0.2s;
+}
+
+/* On larger screens, use smaller font */
+@media (min-width: 600px) {
+    .search-input {
+        font-size: 0.9rem;
+    }
 }
 
 .search-input:focus {
