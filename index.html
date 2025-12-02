@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Track your Magic: The Gathering Avatar The Last Airbender card collection">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Magic Tracker - Avatar The Last Airbender</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <script src="version.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-top">
+            <h1>Magic Tracker</h1>
+            <button id="settings-btn" class="settings-btn" title="Settings">⚙️</button>
+        </div>
+        <div class="tabs">
+            <button class="tab-button active" data-set="tla">TLA</button>
+            <button class="tab-button" data-set="tle">TLE</button>
+        </div>
+        <p class="subtitle" id="set-subtitle">Avatar: The Last Airbender Set</p>
+        <div class="stats">
+            <span id="collected-count">0</span> / <span id="total-count">0</span> collected
+        </div>
+    </header>
+    
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="settings-modal hidden">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <button id="close-settings-btn" class="close-btn">×</button>
+            </div>
+            <div class="settings-body">
+                <div class="settings-section">
+                    <h3>App Information</h3>
+                    <div class="setting-item">
+                        <label>Version:</label>
+                        <span id="version-display">v1.0.0</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Release Date:</label>
+                        <span id="release-date">-</span>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Updates</h3>
+                    <div class="setting-item">
+                        <button id="check-updates-btn" class="update-btn-full">Check for Updates</button>
+                    </div>
+                    <div id="update-status" class="update-status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Update notification -->
+    <div id="update-notification" class="update-notification hidden">
+        <div class="update-content">
+            <p><strong>Update Available!</strong></p>
+            <p id="update-message">A new version is available.</p>
+            <div class="update-actions">
+                <button id="update-now-btn" class="update-action-btn">Update Now</button>
+                <button id="update-later-btn" class="update-action-btn secondary">Later</button>
+            </div>
+        </div>
+    </div>
+    
+    <main>
+        <div id="loading" class="loading">Loading cards...</div>
+        <div id="cards-container" class="cards-grid"></div>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        // Register service worker for offline functionality
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => {
+                        console.log('Service Worker registered');
+                        // Check for updates periodically
+                        setInterval(() => {
+                            reg.update();
+                        }, 60 * 60 * 1000); // Check every hour
+                    })
+                    .catch(err => console.log('Service Worker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
+

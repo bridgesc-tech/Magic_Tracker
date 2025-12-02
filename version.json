@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "releaseDate": "2024-01-01",
+  "updateUrl": "./",
+  "changelog": [
+    "Initial release",
+    "TLA and TLE set support",
+    "Card collection tracking",
+    "Foil indicator",
+    "Tab-based navigation"
+  ]
+}
+
