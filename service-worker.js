@@ -1,5 +1,5 @@
 // Cache version - update this when releasing a new version
-const CACHE_VERSION = '1.1.0';
+const CACHE_VERSION = '1.2.0';
 const CACHE_NAME = `magic-tracker-v${CACHE_VERSION}`;
 const urlsToCache = [
   './',

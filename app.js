@@ -36,6 +36,7 @@ const SETS = {
 // Current state
 let currentSet = 'tla';
 let cards = [];
+let searchTerm = ''; // Current search term
 let collectionState = {}; // Will be organized by set: { tla: {...}, tle: {...} }
 let cardsCache = {}; // Cache cards by set code
 
@@ -52,6 +53,9 @@ async function init() {
     
     // Set up tab switching
     setupTabs();
+    
+    // Set up search functionality
+    setupSearch();
     
     // Load initial set
     await loadSet(currentSet);
@@ -109,9 +113,52 @@ function setupTabs() {
     });
 }
 
+// Set up search functionality
+function setupSearch() {
+    const searchInput = document.getElementById('search-input');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    
+    if (!searchInput || !clearSearchBtn) return;
+    
+    // Search as user types
+    searchInput.addEventListener('input', (e) => {
+        searchTerm = e.target.value.trim().toLowerCase();
+        updateClearButton();
+        renderCards();
+    });
+    
+    // Clear search button
+    clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        searchTerm = '';
+        updateClearButton();
+        renderCards();
+    });
+    
+    // Update clear button visibility
+    function updateClearButton() {
+        if (searchTerm) {
+            clearSearchBtn.classList.remove('hidden');
+        } else {
+            clearSearchBtn.classList.add('hidden');
+        }
+    }
+}
+
 // Switch to a different set
 async function switchToSet(setCode) {
     if (setCode === currentSet) return;
+    
+    // Clear search when switching sets
+    const searchInput = document.getElementById('search-input');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    if (searchInput) {
+        searchInput.value = '';
+        searchTerm = '';
+        if (clearSearchBtn) {
+            clearSearchBtn.classList.add('hidden');
+        }
+    }
     
     // Update active tab
     document.querySelectorAll('.tab-button').forEach(btn => {
@@ -992,7 +1039,23 @@ function renderCards() {
         return;
     }
     
-    cards.forEach((card, index) => {
+    // Filter cards based on search term
+    let cardsToRender = cards;
+    if (searchTerm) {
+        cardsToRender = cards.filter(card => {
+            const cardName = (card.name || (card.card_faces && card.card_faces[0] && card.card_faces[0].name) || '').toLowerCase();
+            const collectorNumber = (card.collector_number || '').toString();
+            
+            return cardName.includes(searchTerm) || collectorNumber.includes(searchTerm);
+        });
+    }
+    
+    if (cardsToRender.length === 0) {
+        container.innerHTML = `<p style="text-align: center; padding: 2rem;">No cards found matching "${searchTerm}".</p>`;
+        return;
+    }
+    
+    cardsToRender.forEach((card, index) => {
         const cardId = card.id || `card-${index}`;
         
         // Get collection state for current set

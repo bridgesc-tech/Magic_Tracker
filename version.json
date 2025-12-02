@@ -1,14 +1,12 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "releaseDate": "2024-12-19",
   "updateUrl": "./",
   "changelog": [
-    "Fixed card fetching to include all variants and sections from Scryfall",
-    "Added support for borderless battle pose cards",
-    "Added placeholder card support for cards not in Scryfall",
-    "Improved comprehensive card fetching using set cards endpoint",
-    "Fixed total card count display (394 for TLA, 317 for TLE)",
-    "Added placeholder cards for basic lands (287-296) and Fire Lord Azula (334)"
+    "Added search functionality to filter cards by name or number",
+    "Improved header layout with reduced vertical spacing",
+    "Added clear search button for easy search reset",
+    "Search automatically clears when switching between sets"
   ]
 }
 
