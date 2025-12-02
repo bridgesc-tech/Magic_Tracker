@@ -457,6 +457,21 @@ main {
     opacity: 1;
 }
 
+/* Placeholder card styles */
+.card-item.placeholder .card-image {
+    background: #222;
+    border: 2px dashed #555;
+}
+
+.card-item.placeholder:not(.collected) .card-image {
+    opacity: 0.3;
+}
+
+.card-item.placeholder.collected .card-image {
+    opacity: 0.6;
+    border-color: var(--collected-border);
+}
+
 .card-info {
     position: absolute;
     bottom: 0;

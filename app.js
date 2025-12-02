@@ -10,13 +10,26 @@ const SETS = {
         code: 'tla',
         name: 'Avatar: The Last Airbender',
         missingCards: [363, 393, 394],
-        totalCards: 394 // Expected total card count
+        totalCards: 394, // Expected total card count
+        placeholderCards: [
+            { number: 287, name: "Plains" },
+            { number: 288, name: "Island" },
+            { number: 289, name: "Swamp" },
+            { number: 290, name: "Mountain" },
+            { number: 291, name: "Forest" },
+            { number: 292, name: "Plains" },
+            { number: 293, name: "Island" },
+            { number: 294, name: "Swamp" },
+            { number: 295, name: "Mountain" },
+            { number: 296, name: "Forest" }
+        ] // Array of {number: X, name: "Card Name"} for cards not in Scryfall
     },
     tle: {
         code: 'tle',
         name: 'Avatar: The Last Airbender Eternal',
         missingCards: [], // Will be determined if needed
-        totalCards: 317 // Expected total card count
+        totalCards: 317, // Expected total card count
+        placeholderCards: [] // Array of {number: X, name: "Card Name"} for cards not in Scryfall
     }
 };
 
@@ -270,15 +283,16 @@ async function fetchVariantCards(setCode = currentSet) {
         // Try querying by set name to catch all related cards
         const setCodeUpper = setCode.toUpperCase();
         
-        // First, query for ALL cards from the set to ensure we get everything
-        // This comprehensive query should catch all 394 cards
-        console.log(`Querying for ALL cards from ${setCodeUpper} set (comprehensive query)...`);
+        // First, try to use Scryfall's set cards endpoint to get ALL cards
+        // This endpoint returns all cards including all variants
+        console.log(`Querying for ALL cards from ${setCodeUpper} set using set cards endpoint...`);
         try {
-            const allCardsResponse = await fetch(`${SCRYFALL_API}?q=set:${setCode}`);
-            if (allCardsResponse.ok) {
-                const allCardsData = await allCardsResponse.json();
-                if (allCardsData.data && allCardsData.data.length > 0) {
-                    const allNewCards = allCardsData.data.filter(card => {
+            // Try the set cards endpoint: /sets/{code}/cards
+            const setCardsResponse = await fetch(`https://api.scryfall.com/sets/${setCode}/cards`);
+            if (setCardsResponse.ok) {
+                const setCardsData = await setCardsResponse.json();
+                if (setCardsData.data && setCardsData.data.length > 0) {
+                    const allNewCards = setCardsData.data.filter(card => {
                         if (existingCardIds.has(card.id)) {
                             return false;
                         }
@@ -295,15 +309,15 @@ async function fetchVariantCards(setCode = currentSet) {
                     });
                     
                     if (allNewCards.length > 0) {
-                        console.log(`Found ${allNewCards.length} additional cards from comprehensive query (response had ${allCardsData.data.length} cards, total_cards: ${allCardsData.total_cards || 'unknown'})`);
+                        console.log(`Found ${allNewCards.length} additional cards from set cards endpoint (response had ${setCardsData.data.length} cards, total_cards: ${setCardsData.total_cards || 'unknown'})`);
                         cards = [...cards, ...allNewCards];
                         allNewCards.forEach(card => existingCardIds.add(card.id));
                         foundNewCards = true;
                         
-                        // Handle pagination for comprehensive query
-                        if (allCardsData.has_more && allCardsData.next_page) {
-                            console.log(`Comprehensive query has pagination, fetching all pages...`);
-                            let nextPage = allCardsData.next_page;
+                        // Handle pagination for set cards endpoint
+                        if (setCardsData.has_more && setCardsData.next_page) {
+                            console.log(`Set cards endpoint has pagination, fetching all pages...`);
+                            let nextPage = setCardsData.next_page;
                             while (nextPage) {
                                 try {
                                     const pageResponse = await fetch(nextPage);
@@ -327,7 +341,7 @@ async function fetchVariantCards(setCode = currentSet) {
                                             });
                                             
                                             if (moreNewCards.length > 0) {
-                                                console.log(`Found ${moreNewCards.length} more cards from comprehensive pagination`);
+                                                console.log(`Found ${moreNewCards.length} more cards from set cards pagination`);
                                                 cards = [...cards, ...moreNewCards];
                                                 moreNewCards.forEach(card => existingCardIds.add(card.id));
                                             }
@@ -340,8 +354,83 @@ async function fetchVariantCards(setCode = currentSet) {
                                         nextPage = null;
                                     }
                                 } catch (err) {
-                                    console.error('Error fetching comprehensive pagination:', err);
+                                    console.error('Error fetching set cards pagination:', err);
                                     nextPage = null;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Fallback to search query if set endpoint doesn't work
+                console.log(`Set cards endpoint returned ${setCardsResponse.status}, trying search query...`);
+                const allCardsResponse = await fetch(`${SCRYFALL_API}?q=set:${setCode}&unique=prints`);
+                if (allCardsResponse.ok) {
+                    const allCardsData = await allCardsResponse.json();
+                    if (allCardsData.data && allCardsData.data.length > 0) {
+                        const allNewCards = allCardsData.data.filter(card => {
+                            if (existingCardIds.has(card.id)) {
+                                return false;
+                            }
+                            if (card.set && card.set.toLowerCase() !== setCode.toLowerCase()) {
+                                return false;
+                            }
+                            if (card.image_uris && card.image_uris.normal) {
+                                return true;
+                            }
+                            if (card.card_faces && card.card_faces[0] && card.card_faces[0].image_uris) {
+                                return true;
+                            }
+                            return false;
+                        });
+                        
+                        if (allNewCards.length > 0) {
+                            console.log(`Found ${allNewCards.length} additional cards from search query with unique=prints (response had ${allCardsData.data.length} cards)`);
+                            cards = [...cards, ...allNewCards];
+                            allNewCards.forEach(card => existingCardIds.add(card.id));
+                            foundNewCards = true;
+                            
+                            // Handle pagination
+                            if (allCardsData.has_more && allCardsData.next_page) {
+                                let nextPage = allCardsData.next_page;
+                                while (nextPage) {
+                                    try {
+                                        const pageResponse = await fetch(nextPage);
+                                        if (pageResponse.ok) {
+                                            const pageData = await pageResponse.json();
+                                            if (pageData.data && pageData.data.length > 0) {
+                                                const moreNewCards = pageData.data.filter(card => {
+                                                    if (existingCardIds.has(card.id)) {
+                                                        return false;
+                                                    }
+                                                    if (card.set && card.set.toLowerCase() !== setCode.toLowerCase()) {
+                                                        return false;
+                                                    }
+                                                    if (card.image_uris && card.image_uris.normal) {
+                                                        return true;
+                                                    }
+                                                    if (card.card_faces && card.card_faces[0] && card.card_faces[0].image_uris) {
+                                                        return true;
+                                                    }
+                                                    return false;
+                                                });
+                                                
+                                                if (moreNewCards.length > 0) {
+                                                    cards = [...cards, ...moreNewCards];
+                                                    moreNewCards.forEach(card => existingCardIds.add(card.id));
+                                                }
+                                                
+                                                nextPage = pageData.has_more ? pageData.next_page : null;
+                                            } else {
+                                                nextPage = null;
+                                            }
+                                        } else {
+                                            nextPage = null;
+                                        }
+                                    } catch (err) {
+                                        console.error('Error fetching search pagination:', err);
+                                        nextPage = null;
+                                    }
                                 }
                             }
                         }
@@ -349,7 +438,7 @@ async function fetchVariantCards(setCode = currentSet) {
                 }
             }
         } catch (err) {
-            console.log('Comprehensive set query failed, continuing with variant queries...', err);
+            console.log('Set cards endpoint query failed, continuing with variant queries...', err);
         }
         
         // Then try specific variant queries to catch any remaining cards
@@ -357,7 +446,10 @@ async function fetchVariantCards(setCode = currentSet) {
             `set:${setCode} (is:showcase or is:extendedart or is:borderless or is:promo)`,
             `set:${setCode} frame:showcase`,
             `set:${setCode} frame:extendedart`,
-            `set:${setCode} frame:borderless`
+            `set:${setCode} frame:borderless`,
+            // Try to catch borderless battle pose cards
+            `set:${setCode} borderless`,
+            `set:${setCode} (borderless or "battle pose" or "neon")`
         ];
         
         const existingCardIds = new Set(cards.map(card => card.id));
@@ -365,12 +457,15 @@ async function fetchVariantCards(setCode = currentSet) {
         
         for (const query of variantQueries) {
             try {
-                const response = await fetch(`${SCRYFALL_API}?q=${encodeURIComponent(query)}`);
+                // Use unique=prints to get all printings including variants
+                const queryUrl = `${SCRYFALL_API}?q=${encodeURIComponent(query)}&unique=prints`;
+                const response = await fetch(queryUrl);
                 
                 if (response.ok) {
                     const data = await response.json();
                     
                     if (data.object === 'error') {
+                        console.log(`Query "${query}" returned error:`, data);
                         continue;
                     }
                     
@@ -550,12 +645,20 @@ async function fetchVariantCards(setCode = currentSet) {
             cards = uniqueCards;
         }
         
+        // Add placeholder cards for missing cards
+        addPlaceholderCards(setCode);
+        
+        // Re-sort after adding placeholders
+        cards.sort((a, b) => {
+            const numA = parseInt(a.collector_number) || 0;
+            const numB = parseInt(b.collector_number) || 0;
+            return numA - numB;
+        });
+        
         // Final update after all cards are loaded
-        console.log(`Final total: ${cards.length} cards loaded (expected: ${setCode === 'tla' ? 394 : setCode === 'tle' ? 281 : 'unknown'})`);
+        console.log(`Final total: ${cards.length} cards loaded (expected: ${setCode === 'tla' ? 394 : setCode === 'tle' ? 317 : 'unknown'})`);
         
         // Render and update stats with final count
-        renderCards();
-        updateStats();
         renderCards();
         updateStats();
     } catch (error) {
@@ -849,6 +952,36 @@ async function fetchCardsAlternative(setCode = currentSet) {
     loadingEl.textContent = 'Unable to load cards. Please check the set code or try again later.';
 }
 
+// Add placeholder cards for cards not found in Scryfall
+function addPlaceholderCards(setCode) {
+    const setConfig = SETS[setCode];
+    if (!setConfig || !setConfig.placeholderCards || setConfig.placeholderCards.length === 0) {
+        return;
+    }
+    
+    const existingNumbers = new Set(cards.map(card => parseInt(card.collector_number)));
+    
+    setConfig.placeholderCards.forEach(placeholder => {
+        const cardNumber = placeholder.number;
+        
+        // Only add if we don't already have this card number
+        if (!existingNumbers.has(cardNumber)) {
+            const placeholderCard = {
+                id: `placeholder-${setCode}-${cardNumber}`,
+                name: placeholder.name,
+                collector_number: cardNumber.toString(),
+                set: setCode,
+                is_placeholder: true, // Flag to identify placeholder cards
+                image_uris: null // No image for placeholders
+            };
+            
+            cards.push(placeholderCard);
+            existingNumbers.add(cardNumber);
+            console.log(`Added placeholder card: #${cardNumber} - ${placeholder.name}`);
+        }
+    });
+}
+
 // Render cards to the DOM
 function renderCards() {
     const container = document.getElementById('cards-container');
@@ -873,8 +1006,14 @@ function renderCards() {
         const collectorNumber = card.collector_number || index + 1;
         
         // Handle both regular cards and double-faced cards
+        // For placeholder cards, use a blank placeholder image
         let imageUrl = '';
-        if (card.image_uris) {
+        const isPlaceholder = card.is_placeholder === true;
+        
+        if (isPlaceholder) {
+            // Create a blank placeholder image for cards not in Scryfall
+            imageUrl = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="280"%3E%3Crect fill="%23222" width="200" height="280"/%3E%3Crect fill="%23333" x="10" y="10" width="180" height="260" rx="5"/%3C/svg%3E';
+        } else if (card.image_uris) {
             imageUrl = card.image_uris.normal || card.image_uris.large || '';
         } else if (card.card_faces && card.card_faces[0] && card.card_faces[0].image_uris) {
             // Use the front face of double-faced cards
@@ -882,7 +1021,7 @@ function renderCards() {
         }
         
         const cardElement = document.createElement('div');
-        cardElement.className = `card-item ${isCollected ? 'collected' : ''}`;
+        cardElement.className = `card-item ${isCollected ? 'collected' : ''} ${isPlaceholder ? 'placeholder' : ''}`;
         cardElement.dataset.cardId = cardId;
         cardElement.addEventListener('click', () => toggleCard(cardId));
         
@@ -892,10 +1031,12 @@ function renderCards() {
         img.className = 'card-image';
         img.loading = 'lazy';
         
-        // Handle image load errors
-        img.onerror = function() {
-            this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="280"%3E%3Crect fill="%23333" width="200" height="280"/%3E%3Ctext fill="%23fff" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage not available%3C/text%3E%3C/svg%3E';
-        };
+        // Handle image load errors (only for non-placeholder cards)
+        if (!isPlaceholder) {
+            img.onerror = function() {
+                this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="280"%3E%3Crect fill="%23333" width="200" height="280"/%3E%3Ctext fill="%23fff" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage not available%3C/text%3E%3C/svg%3E';
+            };
+        }
         
         // Get card name (handle double-faced cards)
         const cardName = card.name || (card.card_faces && card.card_faces[0] && card.card_faces[0].name) || `Card ${collectorNumber}`;
