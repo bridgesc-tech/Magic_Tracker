@@ -29,7 +29,10 @@ const SETS = {
         name: 'Avatar: The Last Airbender Eternal',
         missingCards: [], // Will be determined if needed
         totalCards: 317, // Expected total card count
-        placeholderCards: [] // Array of {number: X, name: "Card Name"} for cards not in Scryfall
+        placeholderCards: [
+            { number: 61.5, name: "" },
+            { number: 61.6, name: "" }
+        ] // Array of {number: X, name: "Card Name"} for cards not in Scryfall
     }
 };
 
@@ -280,9 +283,9 @@ async function fetchCards(setCode = currentSet) {
                     return false;
                 })
                 .sort((a, b) => {
-                    // Sort by collector number if available
-                    const numA = parseInt(a.collector_number) || 0;
-                    const numB = parseInt(b.collector_number) || 0;
+                    // Sort by collector number if available (handle decimals)
+                    const numA = parseFloat(a.collector_number) || 0;
+                    const numB = parseFloat(b.collector_number) || 0;
                     return numA - numB;
                 });
             
@@ -299,8 +302,8 @@ async function fetchCards(setCode = currentSet) {
             
             // Re-sort all cards after all fetching is complete
             cards.sort((a, b) => {
-                const numA = parseInt(a.collector_number) || 0;
-                const numB = parseInt(b.collector_number) || 0;
+                const numA = parseFloat(a.collector_number) || 0;
+                const numB = parseFloat(b.collector_number) || 0;
                 return numA - numB;
             });
             
@@ -672,8 +675,8 @@ async function fetchVariantCards(setCode = currentSet) {
         
         // Re-sort all cards after all fetching is complete
         cards.sort((a, b) => {
-            const numA = parseInt(a.collector_number) || 0;
-            const numB = parseInt(b.collector_number) || 0;
+            const numA = parseFloat(a.collector_number) || 0;
+            const numB = parseFloat(b.collector_number) || 0;
             return numA - numB;
         });
         
@@ -697,8 +700,8 @@ async function fetchVariantCards(setCode = currentSet) {
         
         // Re-sort after adding placeholders
         cards.sort((a, b) => {
-            const numA = parseInt(a.collector_number) || 0;
-            const numB = parseInt(b.collector_number) || 0;
+            const numA = parseFloat(a.collector_number) || 0;
+            const numB = parseFloat(b.collector_number) || 0;
             return numA - numB;
         });
         
@@ -904,14 +907,14 @@ async function fetchMoreCards(nextPageUrl, existingCardIds = null) {
             
             if (moreCards.length > 0) {
                 moreCards.sort((a, b) => {
-                    const numA = parseInt(a.collector_number) || 0;
-                    const numB = parseInt(b.collector_number) || 0;
+                    const numA = parseFloat(a.collector_number) || 0;
+                    const numB = parseFloat(b.collector_number) || 0;
                     return numA - numB;
                 });
                 
                 cards = [...cards, ...moreCards].sort((a, b) => {
-                    const numA = parseInt(a.collector_number) || 0;
-                    const numB = parseInt(b.collector_number) || 0;
+                    const numA = parseFloat(a.collector_number) || 0;
+                    const numB = parseFloat(b.collector_number) || 0;
                     return numA - numB;
                 });
             }
@@ -971,8 +974,8 @@ async function fetchCardsAlternative(setCode = currentSet) {
                                 return false;
                             })
                             .sort((a, b) => {
-                                const numA = parseInt(a.collector_number) || 0;
-                                const numB = parseInt(b.collector_number) || 0;
+                                const numA = parseFloat(a.collector_number) || 0;
+                                const numB = parseFloat(b.collector_number) || 0;
                                 return numA - numB;
                             });
                         
@@ -1006,7 +1009,7 @@ function addPlaceholderCards(setCode) {
         return;
     }
     
-    const existingNumbers = new Set(cards.map(card => parseInt(card.collector_number)));
+    const existingNumbers = new Set(cards.map(card => parseFloat(card.collector_number)));
     
     setConfig.placeholderCards.forEach(placeholder => {
         const cardNumber = placeholder.number;
@@ -1015,7 +1018,7 @@ function addPlaceholderCards(setCode) {
         if (!existingNumbers.has(cardNumber)) {
             const placeholderCard = {
                 id: `placeholder-${setCode}-${cardNumber}`,
-                name: placeholder.name,
+                name: placeholder.name || '',
                 collector_number: cardNumber.toString(),
                 set: setCode,
                 is_placeholder: true, // Flag to identify placeholder cards
@@ -1024,7 +1027,7 @@ function addPlaceholderCards(setCode) {
             
             cards.push(placeholderCard);
             existingNumbers.add(cardNumber);
-            console.log(`Added placeholder card: #${cardNumber} - ${placeholder.name}`);
+            console.log(`Added placeholder card: #${cardNumber} - ${placeholder.name || '(blank)'}`);
         }
     });
 }
@@ -1086,7 +1089,14 @@ function renderCards() {
         const cardElement = document.createElement('div');
         cardElement.className = `card-item ${isCollected ? 'collected' : ''} ${isPlaceholder ? 'placeholder' : ''}`;
         cardElement.dataset.cardId = cardId;
-        cardElement.addEventListener('click', () => toggleCard(cardId));
+        // Only make placeholder cards non-selectable if they have empty names (blank placeholders)
+        if (isPlaceholder && (!card.name || card.name.trim() === '')) {
+            cardElement.classList.add('non-selectable');
+            cardElement.style.cursor = 'default';
+            // Don't add click handler for blank placeholder cards
+        } else {
+            cardElement.addEventListener('click', () => toggleCard(cardId));
+        }
         
         const img = document.createElement('img');
         img.src = imageUrl;

@@ -541,6 +541,28 @@ main {
     border-color: var(--collected-border);
 }
 
+/* Non-selectable placeholder cards (blank placeholders) */
+.card-item.placeholder.non-selectable {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: default !important;
+}
+
+.card-item.placeholder.non-selectable .card-image {
+    background: #333;
+    border: 2px dashed #666;
+    opacity: 0.4;
+}
+
+.card-item.placeholder.non-selectable .card-info {
+    opacity: 0.5;
+}
+
+.card-item.placeholder.non-selectable .card-number,
+.card-item.placeholder.non-selectable .card-name {
+    color: #888;
+}
+
 .card-info {
     position: absolute;
     bottom: 0;

@@ -2,7 +2,7 @@
   "name": "Magic Tracker - Avatar The Last Airbender",
   "short_name": "Magic Tracker",
   "description": "Track your Magic: The Gathering Avatar The Last Airbender card collection",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#1a1a2e",
